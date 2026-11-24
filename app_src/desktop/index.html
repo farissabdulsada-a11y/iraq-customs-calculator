@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>حاسبة التكلفة الكمركية العراقية</title>
+<style>
+  :root{
+    --paper:#f4f2ec; --card:#ffffff; --ink:#172033; --ink-soft:#24304a;
+    --muted:#6d7280; --line:#e6e2d8; --line-strong:#d8d2c4;
+    --chip:#efede6; --stamp:#0e8a7f; --stamp-soft:#e4f4f1;
+    --destructive:#b91c1c; --destructive-bg:#fef2f2;
+    --display:"Sakkal Majalla","Traditional Arabic","Segoe UI",Tahoma,serif;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper);color:var(--ink);
+       font-family:"Segoe UI",Tahoma,Arial,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+
+  /* ---------- app shell ---------- */
+  .app{flex:1;display:flex;flex-direction:column;min-height:0;opacity:0;transform:translateY(6px);
+       transition:opacity .5s ease .08s,transform .5s ease .08s}
+  .app.ready{opacity:1;transform:none}
+
+  .bar{flex:none;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+       padding:0 20px;background:var(--card);border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .fyy-mark{height:32px;width:auto;flex:none;display:block}
+  .brand h1{margin:0;font-size:14.5px;line-height:1.2;white-space:nowrap}
+  .brand .subline{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;letter-spacing:.02em;white-space:nowrap}
+  .brand .subline b{color:var(--ink);font-weight:700;letter-spacing:.08em}
+  .tabs{display:flex;gap:3px;background:var(--chip);padding:3px;border-radius:999px;flex:none}
+  .tab{border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:700;padding:7px 18px;
+       border-radius:999px;cursor:pointer;transition:background .15s,color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{background:var(--ink);color:#fff}
+  .bar-actions{display:flex;align-items:center;gap:10px}
+  .signout,.reset{border:1px solid var(--line-strong);background:transparent;color:var(--muted);font-size:11.5px;font-weight:700;
+           padding:7px 15px;border-radius:999px;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+  .signout:hover,.reset:hover{color:var(--ink);border-color:var(--ink);background:var(--chip)}
+
+  .view{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px 18px}
+  #calcView{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(380px,1fr);gap:12px;align-items:stretch}
+  .inputs{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;
+        box-shadow:0 1px 2px rgba(23,32,51,.04);display:flex;flex-direction:column;min-height:0}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex:none}
+  .card-head h2{margin:0;font-size:14px;font-weight:700}
+  .eyebrow{font-size:9px;letter-spacing:.15em;color:var(--muted);font-weight:700;white-space:nowrap}
+
+  .grid{display:grid;gap:10px}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .field{min-width:0}
+  .field label{display:block;font-size:11.5px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field .hint{font-size:10px;color:var(--muted);font-weight:400;white-space:normal}
+  .input{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff;transition:border-color .15s,box-shadow .15s}
+  .input:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(23,32,51,.07)}
+  .input input{flex:1;min-width:0;border:0;padding:6px 10px;font-size:13.5px;background:transparent;outline:none;
+               font-family:inherit;text-align:right;color:var(--ink)}
+  .input input::placeholder{color:#a8adba}
+  .input .unit{background:var(--chip);color:var(--muted);font-size:10px;padding:0 8px;display:flex;align-items:center;
+               font-weight:700;flex:none;letter-spacing:.02em}
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+
+  .hs-block{margin-top:10px}
+  .hs-block .input input{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  .match{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .match.err{color:var(--destructive)}
+  .match.ok{color:var(--stamp);font-weight:600}
+  .desc{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .warn{display:none;background:var(--destructive-bg);border:1px solid #fecaca;color:var(--destructive);border-radius:8px;
+        padding:8px 10px;font-size:11px;font-weight:700;margin-bottom:8px;line-height:1.5;flex:none}
+
+  .bottom-row{margin-top:auto;padding-top:12px;display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+  .bottom-row .field{width:170px;flex:none}
+  .check{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;font-weight:600;line-height:1.45;
+         cursor:pointer;color:#3d4353}
+  .check input{width:14px;height:14px;margin:1px 0 0;flex:none;accent-color:var(--ink)}
+  #exempt{accent-color:var(--stamp)}
+
+  .hs-wrap{flex:1;display:flex;align-items:center;padding:8px 0;min-height:0}
+  .hs-panel{width:100%;background:#faf9f4;border:1px solid var(--line);border-radius:10px;padding:13px 15px}
+  .hs-panel .input{background:#fff}
+  .exempt-row{display:flex;align-items:flex-end;gap:16px;margin-top:2px}
+  .exempt-row .field{width:200px;flex:none}
+  .checks{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .exempt-note{margin:10px 0 0;font-size:10.5px;line-height:1.6;color:var(--muted);
+               border-top:1px dashed var(--line);padding-top:8px}
+
+  /* ---------- basis / results ---------- */
+  aside.results{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .basis-card{flex:1}
+  .basis{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .basis li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:11.5px;
+            padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .basis li span{color:var(--muted);white-space:nowrap}
+  .basis li b{font-weight:700;text-align:left;color:var(--ink)}
+  .src-link{margin-top:auto;align-self:flex-start;background:none;border:0;padding:8px 0 0;color:var(--stamp);
+            font-size:12px;font-weight:700;cursor:pointer}
+  .src-link:hover{text-decoration:underline}
+  .cif{background:#f4f2ea;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .cif .lbl,.final .lbl{font-size:10px;letter-spacing:.04em;color:var(--muted)}
+  .cif .val{font-size:24px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+  .cif .cur{font-size:11px;color:var(--muted);font-weight:600;margin-inline-start:3px}
+  .cif .sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .rows{margin-top:8px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0}
+  .row .l{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .row .v{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .row .v small{font-size:10px;color:var(--muted);font-weight:600}
+  .divider{border-top:1px solid var(--line);margin:6px 0}
+  .row.total .l{color:var(--ink);font-weight:700}
+  .row.total .v{font-size:15px;font-weight:800}
+  .tag{font-size:9.5px;font-weight:700;color:var(--stamp);background:var(--stamp-soft);
+       border:1px solid #c6e7e2;border-radius:999px;padding:1px 7px;letter-spacing:.02em}
+  .final{background:var(--ink);color:#fff;border-radius:10px;padding:11px 14px;margin-top:12px}
+  .final .lbl{color:#aeb6c6}
+  .final .val{font-size:26px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums}
+  .final .cur{font-size:11.5px;font-weight:600;opacity:.75;margin-inline-start:3px}
+  .final .sub{font-size:11.5px;opacity:.85;margin-top:1px}
+  .meta{border:1px dashed var(--line-strong);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+
+  /* ---------- sources ---------- */
+  .sources-card{max-width:1040px;margin:0 auto}
+  .src-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .src{border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12px;line-height:1.65}
+  .src b{display:block;margin-bottom:1px;font-size:12.5px}
+  .src a{color:#1d4ed8;word-break:break-word}
+  .src .src-note{color:var(--muted);font-size:11.5px}
+  .formulas{background:var(--chip);border-radius:9px;padding:10px 12px;font-size:11.5px;line-height:1.9;color:var(--ink);margin-top:10px}
+  .disc{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7}
+
+  .foot{flex:none;height:30px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;
+        color:var(--muted);border-top:1px solid var(--line);background:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden}
+  .foot .fyy-mark{height:15px;width:auto}
+  .foot b{color:var(--ink);letter-spacing:.08em;font-size:10.5px}
+
+  /* ---------- splash ---------- */
+  .splash{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+          background:radial-gradient(1100px 620px at 72% 16%,#fcfbf7 0%,var(--paper) 58%,#eeece3 100%);
+          transition:opacity .45s ease,visibility .45s ease}
+  .splash::before{content:"";position:absolute;inset:0;pointer-events:none;
+          background:repeating-linear-gradient(135deg,rgba(11,92,73,.035) 0 1px,transparent 1px 11px)}
+  .splash-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px}
+  .sponsor-lockup{display:flex;flex-direction:column;align-items:center;gap:9px;animation:rise .6s .08s both}
+  .sponsor-label{font-size:10px;letter-spacing:.02em;color:var(--muted);font-weight:700}
+  .fyy-logo{display:flex;justify-content:center}
+  .fyy-stacked{width:118px;height:auto;display:block;animation:logoSettle .7s cubic-bezier(.2,.9,.3,1) .12s both}
+  @keyframes logoSettle{from{opacity:0;transform:scale(.94) translateY(4px)}to{opacity:1;transform:none}}
+  .splash-rule{width:64px;height:2px;background:var(--line-strong);margin:24px 0 0;
+               animation:ruleGrow .5s ease .22s both}
+  @keyframes ruleGrow{from{transform:scaleX(0);opacity:0}to{transform:scaleX(1);opacity:1}}
+  .kicker{margin:20px 0 8px;font-size:11px;letter-spacing:.02em;color:var(--stamp);font-weight:700;
+          animation:rise .6s .28s both}
+  .splash h2{font-family:var(--display);font-size:48px;line-height:1.12;margin:0;font-weight:700;
+             color:var(--ink);animation:rise .6s .34s both}
+  .splash .sub{margin:10px 0 0;color:var(--muted);font-size:12.5px;letter-spacing:.03em;animation:rise .6s .42s both}
+  .enter{margin-top:28px;display:inline-flex;align-items:center;gap:9px;border:0;border-radius:999px;
+         background:var(--ink);color:#fff;padding:11px 34px;font-size:14px;font-weight:700;cursor:pointer;
+         transition:background .2s,transform .12s;animation:rise .6s .48s both}
+  .enter:hover{background:var(--ink-soft)}
+  .enter:active{transform:translateY(1px)}
+  .enter .arw{font-size:15px;opacity:.85}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .splash.out{opacity:0;visibility:hidden}
+  .splash:focus,.splash:focus-visible{outline:none}
+
+  @media (max-height:780px){
+    .bar{height:54px}
+    .view{padding:10px 14px}
+    .card{padding:10px 12px}
+    .splash h2{font-size:40px}
+    .fyy-stacked{width:106px}
+    .cif .val{font-size:21px}
+    .final .val{font-size:23px}
+    .row{padding:3.5px 0}
+  }
+  @media (max-width:1020px){
+    #calcView{grid-template-columns:1fr;overflow-y:auto}
+    .results-card{height:auto}
+    .final{margin-top:12px}
+    .src-grid{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="splash" id="splash" role="dialog" aria-modal="true" aria-label="شاشة البداية" tabindex="-1">
+  <div class="splash-inner">
+    <div class="sponsor-lockup">
+      <span class="sponsor-label">برعاية</span>
+      <div class="fyy-logo">
+        <img class="fyy-stacked" src="assets/fyy-logo.png" alt="FYY Nexus"/>
+      </div>
+    </div>
+    <span class="splash-rule"></span>
+    <p class="kicker">أداة شخصية · تعرفة الكمارك 2026</p>
+    <h2>حاسبة التكلفة<br/>الكمركية</h2>
+    <p class="sub">CIF · الرسوم الكمركية · الأمانات الضريبية</p>
+    <button class="enter" id="enterBtn" type="button">ابدأ الحساب <span class="arw" aria-hidden="true">←</span></button>
+  </div>
+</div>
+
+<div class="app" id="app" inert>
+  <header class="bar">
+    <div class="brand">
+      <img class="fyy-mark" src="assets/fyy-mark.png" alt="FYY Nexus"/>
+      <div>
+        <h1>حاسبة التكلفة الكمركية</h1>
+        <span class="subline"><b>FYY NEXUS</b> · تعرفة 2026 · تعمل دون إنترنت</span>
+      </div>
+    </div>
+    <div class="bar-actions">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" type="button" data-tab="calc">الحاسبة</button>
+        <button class="tab" type="button" data-tab="src">المصادر</button>
+      </nav>
+      <button class="reset" id="resetBtn" type="button" title="تفريغ جميع الحقول والبدء من جديد">تفريغ الحقول</button>
+      <button class="signout" id="signOut" type="button" aria-label="تسجيل الخروج والعودة إلى شاشة البداية">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  <main id="calcView" class="view">
+    <div class="inputs">
+      <section class="card">
+        <div class="card-head"><h2>متعلقات التقييم</h2><span class="eyebrow">VALUATION</span></div>
+        <div class="grid g3">
+          <div class="field"><label>قيمة الفاتورة (Invoice)</label><div class="input"><input type="number" id="invoice" value="10000"/><span class="unit">USD</span></div></div>
+          <div class="field"><label>أجور الشحن الخارجي (Freight)</label><div class="input"><input type="number" id="freight" value="800"/><span class="unit">USD</span></div></div>
+          <div class="field"><label>التأمين (Insurance)</label><div class="input"><input type="number" id="insurance" value="200"/><span class="unit">USD</span></div></div>
+          <div class="field"><label>مصاريف أخرى (Other Costs)</label><div class="input"><input type="number" id="otherCosts" value="0"/><span class="unit">USD</span></div></div>
+          <div class="field"><label>الخصومات (Deductions)</label><div class="input"><input type="number" id="deductions" value="0"/><span class="unit">USD</span></div></div>
+          <div class="field"><label>النقل الداخلي (Internal)</label><div class="input"><input type="number" id="internalFreight" value="0"/><span class="unit">USD</span></div></div>
+        </div>
+      </section>
+
+      <section class="card tariff-card" style="flex:1">
+        <div class="card-head"><h2>عوامل التعرفة</h2><span class="eyebrow">TARIFF &amp; HS</span></div>
+        <div class="grid g5">
+          <div class="field"><label>الرسم الكمركي</label><div class="input"><input type="number" id="dutyRate" value="20"/><span class="unit">%</span></div></div>
+          <div class="field"><label>الأمانات الضريبية</label><div class="input"><input type="number" id="vatRate" value="0"/><span class="unit">%</span></div></div>
+          <div class="field"><label>رسوم الخدمات</label><div class="input"><input type="number" id="serviceRate" value="0"/><span class="unit">%</span></div></div>
+          <div class="field"><label>ضريبة المبيعات</label><div class="input"><input type="number" id="salesRate" value="0"/><span class="unit">%</span></div></div>
+          <div class="field"><label>سعر الصرف</label><div class="input"><input type="number" id="exchangeRate" value="1520"/><span class="unit">IQD</span></div></div>
+        </div>
+
+        <div class="hs-wrap">
+          <div class="hs-panel">
+            <div class="field">
+              <label>رمز البند (HS Code) <span class="hint">8 أرقام — يملأ النسب تلقائياً من تعرفة 2026</span></label>
+              <div class="input"><input type="text" id="hs" placeholder="مثال: 84713000" inputmode="numeric"/></div>
+              <div class="match" id="hsMatch"></div>
+              <div class="desc" id="hsDesc"></div>
+              <div class="match" id="exemptMsg"></div>
+              <div class="warn" id="hsWarn">هذه البضاعة محظورة الاستيراد (PROHIBITED_CODE) — راجع الهيئة العامة للكمارك قبل الشحن.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card exempt-card">
+        <div class="card-head"><h2>الإعفاء والمنشأ</h2><span class="eyebrow">EXEMPTION</span></div>
+        <div class="exempt-row">
+          <div class="field"><label>بلد المنشأ</label><div class="input"><input type="text" id="origin" placeholder="مثال: الصين"/></div></div>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="exempt"/>إعفاء الغذاء والأدوية من الرسوم الكمركية <span class="hint">(للرموز المشمولة فقط)</span></label>
+            <label class="check"><input type="checkbox" id="depOnDuty"/>احتساب الأمانات على (CIF + الرسم الكمركي)</label>
+          </div>
+        </div>
+        <p class="exempt-note">الإعفاء يخص الغذاء والدواء المستورد منذ 7 تشرين الأول 2026 — ولا يشمل التبغ أو المشروبات الكحولية.</p>
+      </section>
+    </div>
+
+    <aside class="results">
+      <section class="card results-card">
+        <div class="card-head"><h2>النتائج</h2><span class="eyebrow">RESULT</span></div>
+        <div class="warn" id="resWarn">البضاعة المحددة مدرجة ضمن البضائع المحظورة (PROHIBITED_CODE).</div>
+        <div class="cif">
+          <div class="lbl">القيمة الكمركية (CIF)</div>
+          <div class="val"><span id="cifUsd">0</span><span class="cur">USD</span></div>
+          <div class="sub">≈ <span id="cifIqd">0</span> د.ع</div>
+        </div>
+        <div class="rows">
+          <div class="row"><span class="l">الرسم الكمركي <span class="tag" id="dutyTag" style="display:none">معفى</span></span><span class="v"><span id="dutyV">0</span> <small>USD</small></span></div>
+          <div class="row"><span class="l">الأمانات الضريبية <span style="font-size:9.5px">(دفعة مقدمة)</span></span><span class="v"><span id="vatV">0</span> <small>USD</small></span></div>
+          <div class="row"><span class="l">ضريبة المبيعات</span><span class="v"><span id="salesV">0</span> <small>USD</small></span></div>
+          <div class="row"><span class="l">رسوم الخدمات</span><span class="v"><span id="serviceV">0</span> <small>USD</small></span></div>
+          <div class="divider"></div>
+          <div class="row total"><span class="l">مجموع الرسوم والضرائب</span><span class="v"><span id="taxesV">0</span> <small>USD</small></span></div>
+        </div>
+        <div class="final">
+          <div class="lbl">الإجمالي النهائي</div>
+          <div class="val"><span id="totalUsd">0</span><span class="cur">USD</span></div>
+          <div class="sub">≈ <span id="totalIqd">0</span> د.ع</div>
+        </div>
+        <div class="meta" id="meta" style="display:none"></div>
+      </section>
+
+      <section class="card basis-card">
+        <div class="card-head"><h2>أساس الحساب</h2><span class="eyebrow">BASIS</span></div>
+        <ul class="basis">
+          <li><span>التعرفة</span><b>جدول الكمارك 2026 — 8,381 رمزاً</b></li>
+          <li><span>الأمانات</span><b>قرار 957/2025 — تُسوّى سنوياً</b></li>
+          <li><span>الإعفاء</span><b>الغذاء والدواء منذ 7 تشرين الأول 2026</b></li>
+        </ul>
+        <button class="src-link" type="button" data-goto="src">عرض المصادر ←</button>
+      </section>
+    </aside>
+  </main>
+
+  <section class="view" id="srcView" style="display:none">
+    <div class="card sources-card">
+      <div class="card-head"><h2>مصادر الحساب</h2><span class="eyebrow">SOURCES</span></div>
+      <div class="src-grid">
+        <div class="src">
+          <b>التعرفة الكمركية 2026 — الهيئة العامة للكمارك</b>
+          <div class="src-note">نسب الرسم الكمركي والأمانات لكل رمز HS (8,381 رمزاً) — المصدر المباشر لبيانات التطبيق.</div>
+          <a href="https://tariffs.gcc.iq/" target="_blank" rel="noreferrer">tariffs.gcc.iq</a>
+        </div>
+        <div class="src">
+          <b>قانون الكمارك رقم (23) لسنة 1984 المعدل</b>
+          <div class="src-note">الأساس القانوني للتقييم الكمركي والرسوم، والمشار إليه في قرار آليات الاحتساب.</div>
+          <a href="https://customs.mof.gov.iq/" target="_blank" rel="noreferrer">customs.mof.gov.iq</a>
+        </div>
+        <div class="src">
+          <b>قرار مجلس الوزراء رقم (569) لسنة 2025 — آليات احتساب القيمة الكمركية</b>
+          <div class="src-note">المعلنة في 9 شباط 2026: اعتماد القيمة المثبتة في القوائم التجارية المصرّح عنها أصولياً بموجب البيان المسبق، وبحسب سجلات الهيئة عند عدم وجود تحويل، مع تدقيق المصارف للقيم.</div>
+          <a href="https://www.mawazin.net/Details.aspx?jimare=273085" target="_blank" rel="noreferrer">mawazin.net — بيان الهيئة</a>
+        </div>
+        <div class="src">
+          <b>قرار مجلس الوزراء رقم (957) لسنة 2025 — الأمانات الضريبية</b>
+          <div class="src-note">إعادة استيفاء الأمانات الضريبية عبر ASYCUDA وفق جداول ونسب محددة، وتُسوّى سنوياً مع الهيئة العامة للضرائب.</div>
+          <a href="https://osamatumalegal.com/ar/blog/%D8%AA%D8%A3%D8%AB%D9%8A%D8%B1-%D8%A7%D9%84%D8%A3%D8%B3%D9%8A%D9%83%D9%88%D8%AF%D8%A7-%D8%B9%D9%84%D9%89-%D8%A7%D9%84%D8%A3%D9%85%D8%A7%D9%86%D8%A7%D8%AA-%D8%A7%D9%84%D8%B6%D8%B1%D9%8A%D8%A8%D9%8A%D8%A9-%D9%81%D9%8A-%D8%A7%D9%84%D9%85%D9%86%D8%A7%D9%81%D8%B0-%D8%A7%D9%84%D8%AC%D9%85%D8%B1%D9%83%D9%8A%D8%A9" target="_blank" rel="noreferrer">osamatumalegal.com — الأمانات عبر الأسيكودا</a>
+        </div>
+        <div class="src">
+          <b>إعفاء المواد الغذائية والأدوية المستوردة من الرسوم الكمركية</b>
+          <div class="src-note">قرار مجلس الوزراء، ابتداءً من 7 تشرين الأول 2026. لا توجد قائمة رسمية منشورة برموز البنود، لذا يُطبَّق خيار الإعفاء فقط على رموز المواد الغذائية والأدوية في التعرفة: الفصول 01–04، 07–12، 15–22 (باستثناء المشروبات الكحولية 2203–2208)، والرمز 30 للأدوية؛ ولا يشمل التبغ (24). تظهر في الحاسبة ملاحظة إذا كان الرمز غير مشمول.</div>
+          <a href="https://www.facebook.com/IraqiPMO/posts/1607088024798484/" target="_blank" rel="noreferrer">المكتب الإعلامي لرئيس الوزراء</a>
+        </div>
+        <div class="src">
+          <b>سعر الصرف الرسمي 1520 د.ع/دولار</b>
+          <div class="src-note">البنك المركزي العراقي اعتباراً من 7 تشرين الأول 2026 (1510 للمصارف) — قيمة افتراضية في الحاسبة، وتؤثر على عرض الدينار فقط.</div>
+          <a href="https://www.aljazeera.net/ebusiness/2026/10/7/%D8%A3%D9%88%D9%84-%D8%AA%D8%B9%D8%AF%D9%8A%D9%84-%D9%85%D9%86%D8%B0-3-%D8%B3%D9%86%D9%88%D8%A7%D8%AA-%D8%A7%D9%84%D8%B9%D8%B1%D8%A7%D9%82-%D9%8A%D8%B1%D9%81%D8%B9-%D8%B3%D8%B9%D8%B1" target="_blank" rel="noreferrer">الجزيرة — رفع سعر الدولار الرسمي</a>
+        </div>
+        <div class="src">
+          <b>ضريبة المبيعات 15% على سلع مختارة</b>
+          <div class="src-note">تُحتسب على (CIF + الرسم الكمركي) بحسب أدلة الاستيراد 2026 — تُدخل يدوياً في الحاسبة عند انطباقها على البضاعة.</div>
+          <a href="https://www.hanooot.com/blog/cost-of-importing-to-iraq-customs-guide" target="_blank" rel="noreferrer">hanooot.com</a> ·
+          <a href="https://www.sino-shipping.com/ar/shipping-from-china-to-iraq/import-duties-taxes/" target="_blank" rel="noreferrer">sino-shipping.com</a>
+        </div>
+        <div class="src">
+          <b>قواعد التقييم الدولية (WCO / WTO)</b>
+          <div class="src-note">القواعد والمعايير الدولية المعتمدة لدى منظمة الكمارك العالمية ومنظمة التجارة العالمية، المشار إليها في قرار آليات الاحتساب.</div>
+          <a href="https://www.wcoomd.org/" target="_blank" rel="noreferrer">wcoomd.org</a> ·
+          <a href="https://www.wto.org/" target="_blank" rel="noreferrer">wto.org</a>
+        </div>
+      </div>
+      <div class="formulas">
+        <div><b>CIF</b> = الفاتورة + الشحن + التأمين + المصاريف الأخرى − الخصومات الموثقة</div>
+        <div><b>الرسم الكمركي</b> = CIF × نسبة الرسم</div>
+        <div><b>الأمانات الضريبية</b> = CIF × النسبة (أو (CIF + الرسم) عند تفعيل الخيار)</div>
+        <div><b>ضريبة المبيعات</b> = (CIF + الرسم) × النسبة</div>
+        <div><b>رسوم الخدمات</b> = CIF × النسبة</div>
+      </div>
+      <div class="disc">أداة شخصية استرشادية، وليست صادرة عن الهيئة العامة للكمارك أو أي جهة حكومية. القيم النهائية تعتمد على التعليمات النافذة ونتيجة الترسيم الكمركي.</div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <img class="fyy-mark" src="assets/fyy-mark.png" alt=""/>
+    أداة شخصية استرشادية — برعاية <b>FYY NEXUS</b> · القيم النهائية حسب تعليمات الهيئة العامة للكمارك.
+  </footer>
+</div>
+
+<script>
+let TARIFF = {};
+let CURRENT = null;
+const fmt = v => new Intl.NumberFormat("ar-IQ",{maximumFractionDigits:2}).format(v||0);
+const num = id => parseFloat(document.getElementById(id).value) || 0;
+const $ = id => document.getElementById(id);
+
+function lookup(raw){
+  const c = (raw||"").replace(/\D/g,"");
+  if(c.length < 8) return null;
+  const code = c.slice(0,8);
+  return TARIFF[code] ? {code, ...TARIFF[code]} : null;
+}
+
+function recalc(){
+  const inv=num("invoice"), fr=num("freight"), ins=num("insurance"),
+        oth=num("otherCosts"), ded=num("deductions"), ex=num("exchangeRate");
+  const cif = inv+fr+ins+oth-ded;
+  const exempt = $("exempt").checked && !!(CURRENT && CURRENT.x);
+  const dutyRate = exempt ? 0 : num("dutyRate");
+  const duty = cif * dutyRate/100;
+  const depBase = $("depOnDuty").checked ? cif + duty : cif;
+  const dep = depBase * num("vatRate")/100;
+  const sales = (cif + duty) * num("salesRate")/100;
+  const svc = cif * num("serviceRate")/100;
+  const taxes = duty+dep+sales+svc;
+  const total = cif+taxes;
+  $("cifUsd").textContent = fmt(cif);
+  $("cifIqd").textContent = fmt(cif*ex);
+  $("dutyV").textContent = fmt(duty);
+  $("vatV").textContent = fmt(dep);
+  $("salesV").textContent = fmt(sales);
+  $("serviceV").textContent = fmt(svc);
+  $("taxesV").textContent = fmt(taxes);
+  $("totalUsd").textContent = fmt(total);
+  $("totalIqd").textContent = fmt(total*ex);
+  $("dutyTag").style.display = exempt ? "inline-flex" : "none";
+  const hs = $("hs").value, org = $("origin").value;
+  const meta = $("meta");
+  if(hs||org){
+    meta.style.display="block";
+    meta.innerHTML = (hs?`<div>HS Code: <b style="color:var(--ink)">${hs}</b></div>`:"") + (org?`<div>المنشأ: <b style="color:var(--ink)">${org}</b></div>`:"");
+  } else meta.style.display="none";
+}
+
+function setWarn(v){
+  $("hsWarn").style.display = v;
+  $("resWarn").style.display = v;
+}
+
+function onHs(){
+  const raw = $("hs").value;
+  const digits = raw.replace(/\D/g,"");
+  const box = $("hsMatch"), desc = $("hsDesc"), emsg = $("exemptMsg");
+  const on = $("exempt").checked;
+  const clearExempt = () => { emsg.textContent=""; emsg.className="match"; };
+  if(!raw){ CURRENT=null; box.textContent=""; box.className="match"; desc.textContent=""; clearExempt(); setWarn("none"); recalc(); return; }
+  if(digits.length < 8){
+    CURRENT=null;
+    box.className = "match err";
+    box.textContent = `أكمل رمز البند إلى 8 أرقام (أدخلت ${digits.length}) للحصول على نسبة دقيقة`;
+    desc.textContent=""; clearExempt(); setWarn("none"); recalc(); return;
+  }
+  const m = lookup(raw);
+  CURRENT = m || null;
+  if(m){
+    box.className = m.p ? "match err" : "match";
+    box.textContent = `مطابقة: ${m.code} — رسم ${m.d}% · أمانات ${m.t}%` + (m.p ? " · محظور" : "") + (m.x ? (on ? " · معفى" : " · مشمول بالإعفاء") : "");
+    desc.textContent = m.n || "";
+    $("dutyRate").value = m.d;
+    $("vatRate").value = m.t;
+    if(m.x && !on){ emsg.className="match ok"; emsg.textContent="هذا الرمز مشمول بإعفاء الغذاء والأدوية — فعّل خيار الإعفاء لتطبيقه."; }
+    else if(!m.x && on){ emsg.className="match"; emsg.textContent="خيار الإعفاء لا ينطبق على هذا الرمز (ليس غذاءً أو دواءً)."; }
+    else clearExempt();
+  } else {
+    box.className="match err";
+    box.textContent = "لا توجد مطابقة في جدول التعرفة 2026";
+    desc.textContent="";
+    clearExempt();
+  }
+  setWarn((m && m.p) ? "block" : "none");
+  recalc();
+}
+
+document.querySelectorAll("input").forEach(el=>{
+  if(el.id==="hs" || el.id==="exempt") el.addEventListener("input",onHs);
+  else el.addEventListener("input",recalc);
+});
+
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active", x===t));
+    const calc = t.dataset.tab === "calc";
+    $("calcView").style.display = calc ? "" : "none";
+    $("srcView").style.display = calc ? "none" : "block";
+  });
+});
+document.querySelectorAll("[data-goto]").forEach(b=>{
+  b.addEventListener("click",()=>{
+    const t = document.querySelector(`.tab[data-tab="${b.dataset.goto}"]`);
+    if(t) t.click();
+  });
+});
+
+/* splash -> app transition */
+let splashTimer = null;
+function enterApp(){
+  if(document.body.dataset.entered) return;
+  document.body.dataset.entered="1";
+  $("app").inert = false;
+  $("splash").classList.add("out");
+  $("app").classList.add("ready");
+  splashTimer = setTimeout(()=>{ $("splash").style.display="none"; }, 520);
+}
+function exitApp(){
+  if(!document.body.dataset.entered) return;
+  delete document.body.dataset.entered;
+  clearTimeout(splashTimer);
+  document.querySelector('.tab[data-tab="calc"]').click();
+  const sp = $("splash");
+  sp.style.display = "flex";
+  void sp.offsetWidth;
+  sp.classList.remove("out");
+  $("app").classList.remove("ready");
+  $("app").inert = true;
+  setTimeout(()=>$("splash").focus(), 80);
+}
+$("enterBtn").addEventListener("click",enterApp);
+$("signOut").addEventListener("click",exitApp);
+$("resetBtn").addEventListener("click",()=>{
+  document.querySelectorAll("#calcView input").forEach(el=>{
+    if(el.type==="checkbox") el.checked=false; else el.value="";
+  });
+  CURRENT=null;
+  onHs();
+  $("hs").focus();
+});
+document.addEventListener("keydown", e=>{
+  if(e.key==="Enter" && !document.body.dataset.entered){ e.preventDefault(); enterApp(); }
+});
+$("splash").focus();
+
+fetch("tariff.json").then(r=>r.json()).then(d=>{TARIFF=d;onHs();}).catch(()=>onHs());
+recalc();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+node_modules/
+*.asar
+*.asar.bak*
+.tools/
+app_src/tsconfig.tsbuildinfo
+
+# packaging output
+build/
+dist/
+release/
+
+# scratch screenshots
+_*.png
+compare.js
+diff_*.json
+gcc_all.json
+tariff_before_exempt.json
